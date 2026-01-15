@@ -60,4 +60,18 @@ class Utilisateur extends Authenticatable
             ->withPivot('statut', 'date_inscription')
             ->withTimestamps();
     }
+
+    /**
+     * Check if user has a specific permission
+     */
+    public function hasPermission(string $permission): bool
+    {
+        if (!$this->role) {
+            return false;
+        }
+
+        $permissions = $this->role->permissions ?? [];
+
+        return in_array($permission, $permissions);
+    }
 }

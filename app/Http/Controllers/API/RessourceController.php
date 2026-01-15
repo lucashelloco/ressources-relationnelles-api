@@ -62,10 +62,8 @@ class RessourceController extends Controller
     {
         $ressource = Ressource::with([
             'auteur',
-            'moderateur',
             'categories',
-            'tags',
-            'commentaires.auteur'
+            'tags'
         ])->findOrFail($id);
 
         // Incrémenter le compteur de vues
@@ -223,15 +221,23 @@ class RessourceController extends Controller
             $utilisateur->favoris()->detach($id);
             $ressource->decrement('nb_favoris');
             $message = 'Ressource retirée des favoris';
+            $isFavoris = false;
         } else {
             $utilisateur->favoris()->attach($id, ['date_ajout' => now()]);
             $ressource->increment('nb_favoris');
             $message = 'Ressource ajoutée aux favoris';
+            $isFavoris = true;
         }
+
+        $ressource->refresh();
 
         return response()->json([
             'success' => true,
-            'message' => $message
+            'message' => $message,
+            'data' => [
+                'is_favoris' => $isFavoris,
+                'nb_favoris' => $ressource->nb_favoris
+            ]
         ]);
     }
 

@@ -29,6 +29,13 @@ class Activite extends Model
         'nb_participants_actuels' => 'integer'
     ];
 
+    protected $appends = ['places_restantes'];
+
+    public function getPlacesRestantesAttribute()
+    {
+        return $this->nb_participants_max - $this->nb_participants_actuels;
+    }
+
     public function organisateur()
     {
         return $this->belongsTo(Utilisateur::class, 'organisateur_id');
