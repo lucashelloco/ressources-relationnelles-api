@@ -11,25 +11,34 @@ use Illuminate\Support\Facades\Route;
 
 // Routes publiques
 Route::prefix('v1')->group(function () {
-    
+
     // Authentification
     Route::post('/login', [App\Http\Controllers\API\AuthController::class, 'login']);
     Route::post('/register', [App\Http\Controllers\API\AuthController::class, 'register']);
     Route::post('/forgot-password', [App\Http\Controllers\API\AuthController::class, 'forgotPassword']);
-    
+
+    // Statistiques
+    Route::get('/stats', [App\Http\Controllers\API\StatsController::class, 'index']);
+
+    // Configuration (options pour formulaires)
+    Route::get('/config', [App\Http\Controllers\API\ConfigController::class, 'index']);
+
     // Ressources publiques (lecture seule)
     Route::get('/ressources', [App\Http\Controllers\API\RessourceController::class, 'index']);
     Route::get('/ressources/{id}', [App\Http\Controllers\API\RessourceController::class, 'show']);
-    
+
     // Catégories publiques
     Route::get('/categories', [App\Http\Controllers\API\CategorieController::class, 'index']);
-    
+
     // Tags publics
     Route::get('/tags', [App\Http\Controllers\API\TagController::class, 'index']);
-    
+
     // Activités publiques
     Route::get('/activites', [App\Http\Controllers\API\ActiviteController::class, 'index']);
     Route::get('/activites/{id}', [App\Http\Controllers\API\ActiviteController::class, 'show']);
+
+    // Commentaires publics (approuvés uniquement)
+    Route::get('/ressources/{ressourceId}/commentaires', [App\Http\Controllers\API\CommentaireController::class, 'index']);
 });
 
 // Routes protégées (nécessitent authentification)
@@ -38,7 +47,7 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     // Authentification
     Route::post('/logout', [App\Http\Controllers\API\AuthController::class, 'logout']);
     Route::get('/user', function (Request $request) {
-        return $request->user();
+        return $request->user()->load('role');
     });
     
     // Profil utilisateur
@@ -46,6 +55,9 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
         Route::get('/', [App\Http\Controllers\API\UtilisateurController::class, 'profil']);
         Route::put('/', [App\Http\Controllers\API\UtilisateurController::class, 'updateProfil']);
     });
+
+    // User's discussions
+    Route::get('/user/discussions', [App\Http\Controllers\API\DiscussionController::class, 'getUserDiscussions']);
     
     // Ressources (CRUD complet)
     Route::prefix('ressources')->group(function () {
@@ -63,9 +75,42 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
         Route::post('/', [App\Http\Controllers\API\ActiviteController::class, 'store']);
         Route::put('/{id}', [App\Http\Controllers\API\ActiviteController::class, 'update']);
         Route::delete('/{id}', [App\Http\Controllers\API\ActiviteController::class, 'destroy']);
-        
+
         // Gestion des participants
+        Route::get('/{id}/participants', [App\Http\Controllers\API\ActiviteController::class, 'participants']);
         Route::post('/{id}/inscription', [App\Http\Controllers\API\ActiviteController::class, 'inscrire']);
         Route::delete('/{id}/inscription', [App\Http\Controllers\API\ActiviteController::class, 'desinscrire']);
+    });
+
+    // Commentaires (CRUD)
+    Route::prefix('ressources/{ressourceId}/commentaires')->group(function () {
+        Route::post('/', [App\Http\Controllers\API\CommentaireController::class, 'store']);
+        Route::put('/{id}', [App\Http\Controllers\API\CommentaireController::class, 'update']);
+        Route::delete('/{id}', [App\Http\Controllers\API\CommentaireController::class, 'destroy']);
+    });
+
+    // Discussions (pour chaque ressource)
+    Route::prefix('ressources/{ressourceId}/discussions')->group(function () {
+        Route::get('/', [App\Http\Controllers\API\DiscussionController::class, 'index']);
+        Route::post('/', [App\Http\Controllers\API\DiscussionController::class, 'store']);
+        Route::get('/{discussionId}', [App\Http\Controllers\API\DiscussionController::class, 'getMessages']);
+        Route::post('/{discussionId}/messages', [App\Http\Controllers\API\DiscussionController::class, 'sendMessage']);
+        Route::delete('/{discussionId}', [App\Http\Controllers\API\DiscussionController::class, 'destroy']);
+    });
+
+    // Modération des commentaires (modérateurs uniquement)
+    Route::middleware('can:moderer_contenu')->prefix('commentaires')->group(function () {
+        Route::get('/en-attente', [App\Http\Controllers\API\CommentaireController::class, 'enAttente']);
+        Route::post('/{id}/approuver', [App\Http\Controllers\API\CommentaireController::class, 'approuver']);
+        Route::post('/{id}/rejeter', [App\Http\Controllers\API\CommentaireController::class, 'rejeter']);
+    });
+
+    // Notifications
+    Route::prefix('notifications')->group(function () {
+        Route::get('/', [App\Http\Controllers\API\NotificationController::class, 'index']);
+        Route::get('/unread-count', [App\Http\Controllers\API\NotificationController::class, 'unreadCount']);
+        Route::post('/{id}/mark-as-read', [App\Http\Controllers\API\NotificationController::class, 'markAsRead']);
+        Route::post('/mark-all-as-read', [App\Http\Controllers\API\NotificationController::class, 'markAllAsRead']);
+        Route::delete('/{id}', [App\Http\Controllers\API\NotificationController::class, 'destroy']);
     });
 });

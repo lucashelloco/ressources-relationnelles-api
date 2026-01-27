@@ -65,7 +65,7 @@ class ActiviteController extends Controller
         $validator = Validator::make($request->all(), [
             'titre' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'type' => 'required|in:discussion,evenement,atelier,groupe_echange,conference,autre',
+            'type' => 'required|in:atelier,conference,groupe_parole,webinaire,formation',
             'date_debut' => 'required|date|after:now',
             'date_fin' => 'nullable|date|after:date_debut',
             'lieu' => 'required_if:en_ligne,false|string|max:255',
@@ -127,7 +127,7 @@ class ActiviteController extends Controller
         $validator = Validator::make($request->all(), [
             'titre' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string',
-            'type' => 'sometimes|required|in:discussion,evenement,atelier,groupe_echange,conference,autre',
+            'type' => 'sometimes|required|in:atelier,conference,groupe_parole,webinaire,formation',
             'date_debut' => 'sometimes|required|date',
             'date_fin' => 'nullable|date|after:date_debut',
             'statut' => 'sometimes|in:planifie,en_cours,termine,annule',
@@ -225,6 +225,23 @@ class ActiviteController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Désinscription réussie'
+        ]);
+    }
+
+    /**
+     * Liste des participants d'une activité
+     */
+    public function participants(int $id): JsonResponse
+    {
+        $activite = Activite::findOrFail($id);
+
+        $participants = $activite->participants()
+            ->withPivot('statut', 'date_inscription')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $participants
         ]);
     }
 }
