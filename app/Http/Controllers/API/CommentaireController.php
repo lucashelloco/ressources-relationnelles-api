@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use App\Models\Commentaire;
 use App\Models\Ressource;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
@@ -68,6 +69,9 @@ class CommentaireController extends Controller
             'contenu' => $request->contenu,
             'statut' => 'en_attente'
         ]);
+
+        // Notify admins about new comment to moderate
+        NotificationService::notifyAdminsNewComment($commentaire->load('auteur'));
 
         return response()->json([
             'success' => true,
@@ -175,6 +179,11 @@ class CommentaireController extends Controller
             'date_moderation' => now()
         ]);
 
+        // Delete all notifications related to this comment
+        \App\Models\Notification::where('type', 'comment_moderation')
+            ->where('data->commentaire_id', $commentaire->id)
+            ->delete();
+
         return response()->json([
             'success' => true,
             'message' => 'Commentaire approuvé',
@@ -206,6 +215,11 @@ class CommentaireController extends Controller
             'date_moderation' => now(),
             'raison_rejet' => $request->raison
         ]);
+
+        // Delete all notifications related to this comment
+        \App\Models\Notification::where('type', 'comment_moderation')
+            ->where('data->commentaire_id', $commentaire->id)
+            ->delete();
 
         return response()->json([
             'success' => true,
